@@ -1,5 +1,5 @@
 import React from "react";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { getAuth } from "@clerk/nextjs/server";
 import CardInfo from "./_components/CardInfo";
 import { db } from "@/utils/dbConfig";
 import { desc, eq, getTableColumns, sql } from "drizzle-orm";
@@ -9,12 +9,13 @@ import BudgetItem from "./budgets/_components/BudgetItem";
 import ExpenseListTable from "./expenses/_components/ExpenseListTable";
 
 export async function getServerSideProps(context) {
-  const { user } = useUser(); // You'll need to manage authentication server-side
+  // Fetch the authenticated user's session
+  const { userId } = getAuth(context.req);
 
-  if (!user) {
+  if (!userId) {
     return {
       redirect: {
-        destination: '/login', // Redirect to login page if not authenticated
+        destination: "/login", // Redirect to login if not authenticated
         permanent: false,
       },
     };
@@ -29,7 +30,7 @@ export async function getServerSideProps(context) {
     })
     .from(Budgets)
     .leftJoin(Expenses, eq(Budgets.id, Expenses.budgetId))
-    .where(eq(Budgets.createdBy, user?.primaryEmailAddress?.emailAddress))
+    .where(eq(Budgets.createdBy, userId))
     .groupBy(Budgets.id)
     .orderBy(desc(Budgets.id));
 
@@ -50,7 +51,7 @@ export async function getServerSideProps(context) {
     })
     .from(Budgets)
     .rightJoin(Expenses, eq(Budgets.id, Expenses.budgetId))
-    .where(eq(Budgets.createdBy, user?.primaryEmailAddress?.emailAddress))
+    .where(eq(Budgets.createdBy, userId))
     .orderBy(desc(Expenses.id));
 
   return {
@@ -63,13 +64,11 @@ export async function getServerSideProps(context) {
 }
 
 function Dashboard({ budgetList, incomeList, expensesList }) {
-  const { user } = useUser();
-
   return (
     <div className="p-8 bg-">
-      <h2 className="font-bold text-4xl">Hi, {user?.fullName} 👋</h2>
+      <h2 className="font-bold text-4xl">Hi, 👋</h2>
       <p className="text-gray-500">
-        Here's what's happening with your money, Let's manage your expense
+        Here's what's happening with your money, Let's manage your expenses
       </p>
 
       <CardInfo budgetList={budgetList} incomeList={incomeList} />
@@ -91,7 +90,7 @@ function Dashboard({ budgetList, incomeList, expensesList }) {
             : [1, 2, 3, 4].map((item, index) => (
                 <div
                   key={index}
-                  className="h-[180xp] w-full
+                  className="h-[180px] w-full
                  bg-slate-200 rounded-lg animate-pulse"
                 ></div>
               ))}
